@@ -1,70 +1,55 @@
-var express=require('express');
-var nodemailer = require("nodemailer");
-var app=express();
-/*
-	Here we are configuring our SMTP Server details.
-	STMP is mail server which is responsible for sending and recieving email.
-*/
-var smtpTransport = nodemailer.createTransport({
-    service: "Gmail",
-    auth: {
-        user: "your mail",
-        pass: "password"
-    }
-});
-var rand,mailOptions,host,link;
-/*------------------SMTP Over-----------------------------*/
 
-/*------------------Routing Started ------------------------*/
+/*Step 1 : Loading All dependencies.*/
+var express	=	require('express');
+var app		=	express();
+var mysql	=	require('mysql');
+
+
+/*Defining Database connection such as user name, password and database.*/
+var connection = mysql.createConnection({
+  host     : 'localhost',
+  user     : 'root',
+  password : '15061994',
+  database : 'discussion_pannel'
+});
+
+connection.connect(function(){
+	console.log("<== MySQL Database is Connected ==>");
+});
+
+/*
+	* Here we are setting the front end environment.
+	* We are telling express to use files from these folders.
+	* This helps us to structure the app in better way.
+*/
+app.use(express.static(__dirname + '/css'));
+app.use(express.static(__dirname + '/js'));
+
+app.set('views', __dirname + '/views');
+app.engine('html', require('ejs').renderFile);
 
 app.get('/',function(req,res){
-	res.sendfile('index.html');
-});
-app.get('/send',function(req,res){
-        rand=Math.floor((Math.random() * 100) + 54);
-	host=req.get('host');
-	link="http://"+req.get('host')+"/verify?id="+rand;
-	mailOptions={
-		to : req.query.to,
-		subject : "Please confirm your Email account",
-		html : "Hello,<br> Please Click on the link to verify your email.<br><a href="+link+">Click here to verify</a>"	
-	}
-	console.log(mailOptions);
-	smtpTransport.sendMail(mailOptions, function(error, response){
-   	 if(error){
-        	console.log(error);
-		res.end("error");
-	 }else{
-        	console.log("Message sent: " + response.message);
-		res.end("sent");
-    	 }
-});
+	
+	res.render('index.html');
+
 });
 
-app.get('/verify',function(req,res){
-console.log(req.protocol+":/"+req.get('host'));
-if((req.protocol+"://"+req.get('host'))==("http://"+host))
-{
-	console.log("Domain is matched. Information is from Authentic email");
-	if(req.query.id==rand)
-	{
-		console.log("email is verified");
-		res.end("<h1>Email "+mailOptions.to+" is been Successfully verified");
-	}
-	else
-	{
-		console.log("email is not verified");
-		res.end("<h1>Bad Request</h1>");
-	}
-}
-else
-{
-	res.end("<h1>Request is from unknown source");
-}
+/*
+	* Here we are loading every content from data base and sending it back to Client in JSON format.
+	* We cannot send it without JSON because Angular do not understand raw data.
+*/
+app.get('/load',function(req,res){
+	console.log("<== We are going to load data from Table ==>");
+	connection.query("select * from user",function(err,rows,fields){
+		if(err)	throw err;		
+		console.log("<== Data is been loaded. ==>");
+		res.end(JSON.stringify(rows));	
+		console.log("<== Data is been sent to Client. ==>");				
+	});
+
 });
 
-/*--------------------Routing Over----------------------------*/
-
-app.listen(3000,function(){
-	console.log("Express Started on Port 3000");
+/*Starting our app at localhost with PORT 7001.*/
+app.listen(7001,function(){
+		console.log("<== App is started at PORT 7001 ==>");
 });
